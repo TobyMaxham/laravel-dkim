@@ -1,0 +1,39 @@
+{
+    "name": "tobymaxham/laravel-dkim",
+    "description": "This package can enable DKIM for your Laravel mails.",
+    "keywords": [
+        "TobyMaxham",
+        "laravel",
+        "dkim"
+    ],
+    "homepage": "https://github.com/TobyMaxham/laravel-dkim",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": ":TobyMaxham",
+            "email": "git@maxham.de",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "illuminate/mail": "^8.73"
+    },
+    "autoload": {
+        "psr-4": {
+            "TobyMaxham\\LaravelDkimSigner\\": "src"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "TobyMaxham\\LaravelDkimSigner\\DkimSignerProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

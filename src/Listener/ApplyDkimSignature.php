@@ -4,7 +4,6 @@ namespace TobyMaxham\LaravelDkimSigner\Listener;
 
 use Illuminate\Mail\Events\MessageSending;
 use TobyMaxham\LaravelDkimSigner\DkimSigner;
-use function config;
 
 class ApplyDkimSignature
 {
@@ -17,13 +16,13 @@ class ApplyDkimSignature
     public function handle(MessageSending $event)
     {
         $message = $event->message;
-        if (!$message instanceof \Swift_Message) {
+        if (! $message instanceof \Symfony\Component\Mime\Message) {
             return;
         }
 
-        $signer = app(DkimSigner::class)->getSigner();
-        if ( $signer instanceof \Swift_Signers_DKIMSigner) {
-            $message->attachSigner($signer);
+        $signedEmail = app(DkimSigner::class)->signMessage($message);
+        if ($signedEmail instanceof \Symfony\Component\Mime\Message) {
+            $message->setHeaders($signedEmail->getHeaders());
         }
     }
 }

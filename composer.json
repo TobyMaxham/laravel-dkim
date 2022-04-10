@@ -17,7 +17,7 @@
     ],
     "require": {
         "php": "^8.0",
-        "illuminate/mail": "^8.73"
+        "illuminate/mail": "^9.7"
     },
     "autoload": {
         "psr-4": {

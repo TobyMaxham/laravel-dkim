@@ -1,6 +1,9 @@
 <?php
 
 return [
+
+    'dkim_signer_enabled' => env('MAIL_DKIM_ENABLED', true),
+
     /*
      * The DKIM selector for your outgoing mail server. (required)
      * For more info, see https://dmarcly.com/blog/what-is-dkim-selector-and-how-does-it-work-dkim-selector-explained

@@ -20,7 +20,17 @@ composer require tobymaxham/laravel-dkim
 
 ## Usage
 
+If you are using Laravel with auto discovery you have nothing to do.
+Be sure the package Service Provider `TobyMaxham\LaravelDkimSigner\DkimSignerProvider` is registered in your `config/app.php` file.
+
+You can disable the signer by setting the `dkim_signer_enabled` config value to `false`.
+
 ```php
+<?php
+
+return [
+    'dkim_signer_enabled' => env('MAIL_DKIM_ENABLED', true),
+];
 ```
 
 ## Credits

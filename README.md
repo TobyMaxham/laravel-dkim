@@ -33,6 +33,18 @@ return [
 ];
 ```
 
+## Changelog
+
+Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+
+## Security Vulnerabilities
+
+If you've found a bug regarding security please mail git@maxham.de instead of using the issue tracker.
+
+## Support me
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Z8Z4NZKU)
+
 ## Credits
 
 - [TobyMaxham](https://github.com/TobyMaxham)

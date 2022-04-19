@@ -12,13 +12,15 @@ return [
 
     /*
      * The domain name for your outgoing mails. (required)
+     * By default, this is extracted from your app url.
      */
-    'dkim_domain' => env('MAIL_DKIM_DOMAIN'),
+    'dkim_domain' => env('MAIL_DKIM_DOMAIN', parse_url(config('app.url'))['host'])
 
     /*
      * The path to your private key to sign the outgoing mails. (required)
+     * The default is storage/app/key.private
      */
-    'dkim_private_key' => env('MAIL_DKIM_PRIVATE_KEY'),
+    'dkim_private_key' => env('MAIL_DKIM_PRIVATE_KEY', storage_path('app/key.private')),
 
     /*
      * The signing algorithm. (required)

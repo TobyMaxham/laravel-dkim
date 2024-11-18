@@ -33,6 +33,15 @@ return [
 ];
 ```
 
+## Generate Key
+```sh
+# Generate new DKIM Key
+openssl genrsa -out dkim_private.pem 2048
+
+# Get the public Key
+openssl ec -in dkim_private.pem -pubout -outform der | openssl base64 -A
+```
+
 ## Changelog
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.

@@ -22,7 +22,8 @@ class DkimSignerProvider extends ServiceProvider
         });
 
         $this->mergeConfigFrom(
-            __DIR__.'/../config/laravel-dkim.php', 'laravel-dkim'
+            __DIR__.'/../config/laravel-dkim.php',
+            'laravel-dkim'
         );
     }
 

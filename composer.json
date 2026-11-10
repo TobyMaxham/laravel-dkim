@@ -1,42 +1,71 @@
 {
     "name": "tobymaxham/laravel-dkim",
-    "description": "This package can enable DKIM for your Laravel mails.",
+    "description": "Add DKIM signatures to your Laravel mails without replacing the mailer. Multiple domains, key generator and DNS check included.",
     "keywords": [
         "TobyMaxham",
         "laravel",
-        "dkim"
+        "dkim",
+        "mail",
+        "email",
+        "signing",
+        "dns"
     ],
     "homepage": "https://github.com/TobyMaxham/laravel-dkim",
     "license": "MIT",
     "authors": [
         {
-            "name": ":TobyMaxham",
+            "name": "TobyMaxham",
             "email": "git@maxham.net",
             "role": "Developer"
         }
     ],
     "require": {
-        "php": "^8.0",
-        "illuminate/mail": "9 - 11"
+        "php": "^8.3",
+        "ext-openssl": "*",
+        "illuminate/console": "^12.0|^13.0",
+        "illuminate/contracts": "^12.0|^13.0",
+        "illuminate/mail": "^12.0|^13.0",
+        "illuminate/support": "^12.0|^13.0",
+        "symfony/mime": "^7.2|^8.0"
     },
     "autoload": {
         "psr-4": {
             "TobyMaxham\\LaravelDkimSigner\\": "src"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "TobyMaxham\\LaravelDkimSigner\\Tests\\": "tests"
+        }
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.21",
+        "orchestra/testbench": "^10.0|^11.0",
+        "pestphp/pest": "^4.0"
+    },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
     },
     "extra": {
         "laravel": {
             "providers": [
                 "TobyMaxham\\LaravelDkimSigner\\DkimSignerProvider"
             ]
+        },
+        "branch-alias": {
+            "dev-main": "4.x-dev"
         }
     },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test-coverage": "XDEBUG_MODE=coverage vendor/bin/pest --coverage",
+        "cs-fix": "./vendor/bin/pint src/ tests/",
+        "analyse": "vendor/bin/phpstan analyse --memory-limit=1G"
+    },
     "minimum-stability": "dev",
-    "prefer-stable": true,
-    "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.64"
-    }
+    "prefer-stable": true
 }

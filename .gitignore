@@ -1,4 +1,10 @@
-/.php-cs-fixer.cache
-/composer.lock
-/dev.notes.md
-/vendor
+build
+composer.lock
+vendor
+coverage
+.phpunit.result.cache
+.idea
+.php-cs-fixer.cache
+.php_cs.cache
+.phpunit.cache
+dev.notes.md

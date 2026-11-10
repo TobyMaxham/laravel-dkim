@@ -1,108 +1,126 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TobyMaxham\LaravelDkimSigner;
 
-use Illuminate\Support\Arr;
-use Symfony\Component\Mime\Crypto\DkimOptions;
+use Throwable;
+use Illuminate\Support\Facades\Log;
+use Symfony\Component\Mime\Message;
+use Illuminate\Contracts\Config\Repository;
+use TobyMaxham\LaravelDkimSigner\Key\PrivateKey;
+use TobyMaxham\LaravelDkimSigner\Config\SenderConfig;
+use TobyMaxham\LaravelDkimSigner\Config\SenderResolver;
+use TobyMaxham\LaravelDkimSigner\Exceptions\DkimException;
+use Symfony\Component\Mime\Crypto\DkimSigner as SymfonyDkimSigner;
+use TobyMaxham\LaravelDkimSigner\Exceptions\InvalidDkimConfiguration;
+use Symfony\Component\Mime\Exception\ExceptionInterface as MimeException;
 
-class DkimSigner
+/**
+ * Signs messages with the sender that matches their From address.
+ */
+final readonly class DkimSigner
 {
-    protected \Illuminate\Contracts\Foundation\Application $app;
-    protected string $configSender = 'default';
+    public const array ON_ERROR = ['throw', 'log'];
 
-    private array $requiredConfig = [
-        'dkim_selector',
-        'dkim_domain',
-        'dkim_private_key',
-    ];
+    public function __construct(
+        private Repository $config,
+        private SenderResolver $resolver,
+    ) {}
 
-    private array $use_config = [];
-
-    public function __construct(\Illuminate\Contracts\Foundation\Application $app)
+    public function isEnabled(): bool
     {
-        $this->app = $app;
+        return filter_var($this->config->get('laravel-dkim.dkim_signer_enabled', false), FILTER_VALIDATE_BOOLEAN);
     }
 
-    public function signMessage(\Symfony\Component\Mime\Message $message, ?string $sender)
+    /**
+     * The signed message, or null if the message is not signed
+     * (disabled, no matching sender, already signed or an error with dkim_on_error=log).
+     */
+    public function sign(Message $message): ?Message
     {
-        if (empty($sender)) {
-            $sender = $this->app['config']->get('laravel-dkim.dkim_default_sender');
+        if (! $this->isEnabled()) {
+            return null;
         }
 
-        if (! $this->app['config']->get('laravel-dkim.dkim_signer_enabled')) {
-            return $message;
+        $onError = $this->errorMode();
+        $sender = null;
+
+        try {
+            $sender = $this->resolver->resolve($message);
+
+            if (null === $sender || $this->isSignedBy($message, $sender)) {
+                return null;
+            }
+
+            $key = PrivateKey::load($sender);
+
+            return (new SymfonyDkimSigner($key->pem, (string) $sender->domain, $sender->selector, [], $sender->passphrase ?? ''))
+                ->sign($message, ['algorithm' => $sender->algorithm] + $sender->options);
+        } catch (DkimException|MimeException $e) {
+            if ('throw' === $onError) {
+                throw $e;
+            }
+
+            $this->report($e, $sender);
+
+            return null;
         }
-
-        $this->configSender = str_replace('.', '_', $sender);
-
-        $signer = $this->getSigner();
-        if ($signer instanceof \Symfony\Component\Mime\Crypto\DkimSigner) {
-            $message = $signer->sign($message, $this->getOptions()->toArray());
-        }
-
-        return $message;
     }
 
-    public function getSigner()
+    /**
+     * Whether the message has a DKIM-Signature with the domain and selector of the sender.
+     */
+    public function isSignedBy(Message $message, SenderConfig $sender): bool
     {
-        throw_if(
-            ! $this->hasRequiredConfig(),
-            'Some configuration is missing to add DKIM signature!'
-        );
+        foreach ($message->getHeaders()->all('DKIM-Signature') as $header) {
+            $tags = self::tags($header->getBodyAsString());
 
-        throw_if(
-            ! is_file($keyfile = Arr::get($this->use_config, 'dkim_private_key')),
-            'Invalid file: '.$keyfile
-        );
-
-        $signer = new \Symfony\Component\Mime\Crypto\DkimSigner(
-            'file://'.$keyfile,
-            Arr::get($this->use_config, 'dkim_domain'),
-            Arr::get($this->use_config, 'dkim_selector'),
-            [],
-            Arr::get($this->use_config, 'dkim_passphrase') ?? ''
-        );
-
-        return $signer;
-    }
-
-    private function hasRequiredConfig(): bool
-    {
-        $config = $this->app['config']->get('laravel-dkim.sender.'.$this->configSender, []);
-        if (empty($config)) {
-            $config = $this->app['config']->get('laravel-dkim.sender.'.$this->app['config']->get('laravel-dkim.dkim_default_sender'), []);
+            if (strtolower($tags['d'] ?? '') === $sender->domain && strtolower($tags['s'] ?? '') === $sender->selector) {
+                return true;
+            }
         }
 
-        $bool = count($this->requiredConfig) === collect($config)
-                ->only($this->requiredConfig)
-                ->filter()
-                ->count();
-
-        if (! $bool) {
-            return false;
-        }
-
-        $this->useConfig($config);
-
-        return true;
+        return false;
     }
 
-    private function useConfig(array $config): void
+    /**
+     * The tags of a DKIM-Signature or DKIM DNS record, e.g. ['v' => 'DKIM1', 'p' => '...'].
+     *
+     * @return array<string, string>
+     */
+    public static function tags(string $value): array
     {
-        $this->use_config = $config;
-    }
+        $tags = [];
 
-    private function getOptions(): DkimOptions
-    {
-        $options = new DkimOptions();
+        foreach (explode(';', $value) as $part) {
+            if (! str_contains($part, '=')) {
+                continue;
+            }
 
-        $algo = Arr::get($this->use_config, 'dkim_algo', 'rsa-sha256');
-        if (empty($algo)) {
-            $algo = 'rsa-sha256';
+            [$name, $tagValue] = explode('=', $part, 2);
+            $tags[strtolower(trim($name))] = (string) preg_replace('/\s+/', '', $tagValue);
         }
 
-        $options->algorithm($algo);
+        return $tags;
+    }
 
-        return $options;
+    public function errorMode(): string
+    {
+        $mode = $this->config->get('laravel-dkim.dkim_on_error') ?? 'throw';
+
+        if (! in_array($mode, self::ON_ERROR, true)) {
+            throw InvalidDkimConfiguration::forKey('laravel-dkim.dkim_on_error', 'The value must be one of: '.implode(', ', self::ON_ERROR).'.');
+        }
+
+        return $mode;
+    }
+
+    private function report(Throwable $e, ?SenderConfig $sender): void
+    {
+        Log::warning('The mail was sent without DKIM signature: '.$e->getMessage(), [
+            'sender'    => $sender?->name,
+            'exception' => $e::class,
+        ]);
     }
 }

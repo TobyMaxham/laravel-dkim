@@ -48,7 +48,7 @@ Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed re
 
 ## Security Vulnerabilities
 
-If you've found a bug regarding security please mail git@maxham.de instead of using the issue tracker.
+If you've found a bug regarding security please mail git@maxham.net instead of using the issue tracker.
 
 ## Support me
 

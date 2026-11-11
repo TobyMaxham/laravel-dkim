@@ -82,7 +82,8 @@ it('reports a wrong passphrase', function () {
 });
 
 it('reports a key that is no RSA key', function () {
-    $key = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'prime256v1']);
+    // PHP 8.3 checks private_key_bits for EC keys too
+    $key = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'prime256v1', 'private_key_bits' => 384]);
     openssl_pkey_export($key, $pem);
 
     expectKeyError(keySender($pem), 'laravel-dkim.sender.default.dkim_private_key', 'The private key must be an RSA key.');

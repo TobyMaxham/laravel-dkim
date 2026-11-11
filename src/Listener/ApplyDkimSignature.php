@@ -1,41 +1,44 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TobyMaxham\LaravelDkimSigner\Listener;
 
+use Symfony\Component\Mime\Message;
 use Illuminate\Mail\Events\MessageSending;
 use TobyMaxham\LaravelDkimSigner\DkimSigner;
 
 class ApplyDkimSignature
 {
-    /**
-     * Handle the event.
-     *
-     * @param $event
-     * @return void
-     */
-    public function handle(\Illuminate\Mail\Events\MessageSending $event)
-    {
-        $message = $event->message;
-        if (! $message instanceof \Symfony\Component\Mime\Message) {
-            return;
-        }
+    public function __construct(protected DkimSigner $signer) {}
 
-        $signedEmail = app(DkimSigner::class)->signMessage($message, $this->getSender($message));
-        if ($signedEmail instanceof \Symfony\Component\Mime\Message) {
-            $message->setHeaders($signedEmail->getHeaders());
+    public function handle(MessageSending $event): void
+    {
+        $signed = $this->signer->sign($event->message);
+
+        if (null !== $signed) {
+            $this->applyHeaders($event->message, $signed);
         }
     }
 
-    private function getSender(\Symfony\Component\Mime\Message $message): ?string
+    /**
+     * Copy the new signature and the headers it covers (e.g. Date and Message-ID) to the message.
+     * The other headers stay untouched, e.g. Bcc, which the signed copy does not contain.
+     */
+    protected function applyHeaders(Message $message, Message $signed): void
     {
-        $from = $message->getFrom();
-        if (! is_array($from)
-            || empty($from)
-            || ! isset($from[0])
-            || ! $from[0] instanceof \Symfony\Component\Mime\Address) {
-            return null;
+        $headers = $message->getHeaders();
+        $signatures = [];
+
+        foreach ($signed->getHeaders()->all() as $header) {
+            if ('dkim-signature' === strtolower($header->getName())) {
+                $signatures[] = $header;
+            } elseif (! $headers->has($header->getName())) {
+                $headers->add($header);
+            }
         }
 
-        return $from[0]->getAddress();
+        // Symfony appends the new signature after existing ones
+        $headers->add(end($signatures) ?: throw new \LogicException('The signed message has no DKIM-Signature.'));
     }
 }

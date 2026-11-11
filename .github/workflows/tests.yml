@@ -19,7 +19,7 @@ jobs:
           php: '8.4'
           extensions: openssl
           coverage: none
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@v4
       - run: vendor/bin/pint --test src/ tests/
       - run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
 
@@ -56,7 +56,7 @@ jobs:
       - name: Require Laravel ${{ matrix.laravel }}
         run: composer require --no-update --dev "illuminate/support:^${{ matrix.laravel }}.0" "illuminate/mail:^${{ matrix.laravel }}.0" "illuminate/console:^${{ matrix.laravel }}.0" "illuminate/contracts:^${{ matrix.laravel }}.0" "orchestra/testbench:^${{ matrix.testbench }}.0"
 
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@v4
         with:
           dependency-versions: ${{ matrix.dependencies || 'highest' }}
 

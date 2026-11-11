@@ -2,7 +2,7 @@
 
 All notable changes to `tobymaxham/laravel-dkim` will be documented in this file
 
-## 4.0.0 - Unreleased
+## 4.0.0 - 2026-11-11
 
 Major release with breaking changes. Please read the [upgrade guide](UPGRADING.md).
 

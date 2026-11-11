@@ -29,19 +29,12 @@ final readonly class SenderResolver
         $domain = null === $address ? null : substr($address, strrpos($address, '@') + 1);
         $senders = $this->senders();
 
-        $wildcards = array_values(array_filter($senders, fn (SenderConfig $sender) => null === $sender->domain));
-        if (count($wildcards) > 1) {
-            throw InvalidDkimConfiguration::forKey('laravel-dkim.sender', sprintf(
-                'Only one sender may have an empty dkim_domain, found: %s.',
-                implode(', ', array_map(fn (SenderConfig $sender) => $sender->name, $wildcards)),
-            ));
-        }
+        $wildcard = array_values(array_filter($senders, fn (SenderConfig $sender) => null === $sender->domain))[0] ?? null;
 
         if (null !== $address && null !== $domain) {
             $sender = $this->byAddress($senders, $address)
                 ?? $this->byDomain($senders, $domain)
-                ?? $wildcards[0]
-                ?? null;
+                ?? $wildcard;
 
             if (null !== $sender) {
                 return null !== $sender->domain ? $sender : $sender->withDomain($domain);
@@ -52,7 +45,7 @@ final readonly class SenderResolver
     }
 
     /**
-     * All configured senders, validated.
+     * All configured senders, validated. At most one sender may have no dkim_domain.
      *
      * @return array<string, SenderConfig>
      */
@@ -72,6 +65,11 @@ final readonly class SenderResolver
             }
 
             $senders[(string) $name] = SenderConfig::fromArray((string) $name, $sender);
+        }
+
+        $wildcards = array_keys(array_filter($senders, fn (SenderConfig $sender) => null === $sender->domain));
+        if (count($wildcards) > 1) {
+            throw InvalidDkimConfiguration::forKey('laravel-dkim.sender', 'Only one sender may have an empty dkim_domain, found: '.implode(', ', $wildcards).'.');
         }
 
         return $senders;

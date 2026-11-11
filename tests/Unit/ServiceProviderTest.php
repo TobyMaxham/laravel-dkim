@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\ServiceProvider;
 use TobyMaxham\LaravelDkimSigner\DkimSigner;
+use TobyMaxham\LaravelDkimSigner\Dns\DnsResolver;
 use TobyMaxham\LaravelDkimSigner\DkimSignerProvider;
+use TobyMaxham\LaravelDkimSigner\Dns\NativeDnsResolver;
 
 it('merges the package config', function () {
     expect(config('laravel-dkim'))->toMatchArray([
@@ -33,10 +36,18 @@ it('binds the signer as scoped instance', function () {
     expect(app(DkimSigner::class))->not->toBe($signer);
 });
 
+it('binds the native DNS resolver', function () {
+    expect(app(DnsResolver::class))->toBeInstanceOf(NativeDnsResolver::class);
+});
+
 it('publishes the config file with a tag', function () {
     $paths = ServiceProvider::pathsToPublish(DkimSignerProvider::class, 'laravel-dkim-config');
 
     expect($paths)->toHaveCount(1)
         ->and(array_values($paths)[0])->toBe(config_path('laravel-dkim.php'))
         ->and(array_keys($paths)[0])->toEndWith('config/laravel-dkim.php');
+});
+
+it('registers the commands', function () {
+    expect(Artisan::all())->toHaveKeys(['dkim:generate', 'dkim:check']);
 });
